@@ -1,21 +1,36 @@
 const core = require('@actions/core');
-const wait = require('./wait');
+const github = require('@actions/github');
 
-
-// most @actions toolkit packages have async methods
-async function run() {
+async function createIssue() {
   try {
-    const ms = core.getInput('milliseconds');
-    core.info(`Waiting ${ms} milliseconds ...`);
+    const token = core.getInput('token')
+    const title = core.getInput('title')
+    const body = core.getInput('body')
+    const assignees = core.getInput('assignees')
 
-    core.debug((new Date()).toTimeString()); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
-    await wait(parseInt(ms));
-    core.info((new Date()).toTimeString());
+    const octokit = github.getOctokit(token)
+    //const octokit = new github.GitHub(token)
 
-    core.setOutput('time', new Date().toTimeString());
+    const response = await octokit.rest.issues.create(
+      {
+        owner: github.context.repo.owner ,
+        repo: github.context.repo.repo,
+        // ..github.context.repo
+        title: title,
+        body: body,
+        assignees: assignees ? assignees.split(","): undefined
+      }
+    )
+
+    //core.setOutput('issue', JSON.stringify(response.data))
+
+    core.startGroup('Logging Issue Response OBJECT')
+    console.log(response.data)
+    core.endGroup()
+    core.setOutput('issue', JSON.stringify(response.data))
   } catch (error) {
-    core.setFailed(error.message);
+      core.setFailed(error.message)
   }
 }
 
-run();
+createIssue()
